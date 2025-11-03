@@ -14,6 +14,7 @@ export default function App() {
   const [draggedTaskId, setDraggedTaskId] = useState(null);
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editingText, setEditingText] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
 
   // Get today's date in YYYY-MM-DD format
   const getTodayDate = () => {
@@ -162,6 +163,7 @@ export default function App() {
       };
       setTasks([...tasks, task]);
       setNewTask('');
+      setShowAddModal(false);
     }
   };
 
@@ -382,7 +384,7 @@ export default function App() {
           {/* Header */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
-              <h1 className="text-3xl font-bold text-gray-800">Daily Tasks</h1>
+              <h1 className="text-xl md:text-3xl font-bold text-gray-800">Daily Tasks</h1>
               <div className="flex gap-2">
                 <button
                   onClick={openHistory}
@@ -393,7 +395,7 @@ export default function App() {
                 </button>
               </div>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center flex-col md:flex-row  md:justify-between">
               <div>
                 <div className="flex items-center text-gray-600 text-sm">
                   <Calendar className="w-4 h-4 mr-2" />
@@ -405,10 +407,10 @@ export default function App() {
               </div>
               
               {/* Export/Import Buttons */}
-              <div className="flex gap-2">
+              <div className="flex gap-1 md:gap-2 mt-4 md:mt-0">
                 <button
                   onClick={exportTodayTasks}
-                  className="flex items-center gap-2 px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors text-sm"
+                  className="flex items-center gap-2 px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors text-[10px] md:text-sm"
                   title="Export today's tasks"
                 >
                   <Download className="w-4 h-4" />
@@ -416,7 +418,7 @@ export default function App() {
                 </button>
                 <button
                   onClick={exportAllHistory}
-                  className="flex items-center gap-2 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm"
+                  className="flex items-center gap-2 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-[10px] md:text-sm"
                   title="Export all history"
                 >
                   <Download className="w-4 h-4" />
@@ -438,14 +440,14 @@ export default function App() {
           </div>
 
           {/* Add Task Input */}
-          <div className="flex gap-2 mb-6">
+          <div className="hidden md:flex gap-2 mb-6 flex-col md:flex-row">
             <input
               type="text"
               value={newTask}
               onChange={(e) => setNewTask(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Add a new task..."
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1  px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <button
               onClick={addTask}
@@ -453,6 +455,16 @@ export default function App() {
             >
               <Plus className="w-5 h-5" />
               Add
+            </button>
+          </div>
+           {/* Add Task Button - Mobile */}
+          <div className="md:hidden mb-2 ">
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              Add New Task
             </button>
           </div>
 
@@ -529,6 +541,41 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      {/* Add Task Modal - Mobile Only */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 md:hidden">
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-md p-6">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">Add New Task</h3>
+            <input
+              type="text"
+              value={newTask}
+              onChange={(e) => setNewTask(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Enter task name..."
+              autoFocus
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setShowAddModal(false);
+                  setNewTask('');
+                }}
+                className="flex-1 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addTask}
+                className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+              >
+                Add Task
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* History Modal */}
       {showHistory && (
