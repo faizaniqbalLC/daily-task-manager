@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Calendar, History, X, RefreshCw, Download, Upload } from 'lucide-react';
+import { Plus, Trash2, Calendar, History, X, RefreshCw, Download, Upload, RotateCw } from 'lucide-react';
 
 export default function App() {
   const [tasks, setTasks] = useState([]);
@@ -15,6 +15,8 @@ export default function App() {
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editingText, setEditingText] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('home'); // 'home', 'add', 'export', 'history'
+  const [showExportModal, setShowExportModal] = useState(false);
 
   // Get today's date in YYYY-MM-DD format
   const getTodayDate = () => {
@@ -134,17 +136,30 @@ export default function App() {
 
   // Check if date has changed and load appropriate tasks
   useEffect(() => {
-    loadTasks();
+    // Check immediately on mount if date has changed
+    const today = getTodayDate();
+    if (currentDate && today !== currentDate) {
+      console.log('Date changed detected, reloading tasks...');
+      loadTasks();
+      return;
+    }
     
+    // Initial load if no current date
+    if (!currentDate) {
+      loadTasks();
+    }
+    
+    // Check every minute if the date has changed
     const interval = setInterval(() => {
       const today = getTodayDate();
       if (today !== currentDate) {
+        console.log('Date changed detected in interval, reloading tasks...');
         loadTasks();
       }
     }, 60000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [currentDate]);
 
   // Save tasks whenever they change
   useEffect(() => {
@@ -163,7 +178,7 @@ export default function App() {
       };
       setTasks([...tasks, task]);
       setNewTask('');
-      setShowAddModal(false);
+      setShowAddModal(false); // Close modal after adding
     }
   };
 
@@ -204,6 +219,7 @@ export default function App() {
 
   const openHistory = () => {
     setShowHistory(true);
+    setActiveTab('history');
     loadHistoryDates();
   };
 
@@ -212,6 +228,7 @@ export default function App() {
     setSelectedHistoryDate(null);
     setHistoryTasks([]);
     setSearchDate('');
+    setActiveTab('home');
   };
 
   // Drag and drop handlers
@@ -362,9 +379,23 @@ export default function App() {
   };
 
   // Search for tasks by date
-  const searchByDate = (searchDate) => {
-    setSearchDate(searchDate);
+  const searchByDate = () => {
+    if (!searchDate) {
+      alert('Please select a date');
+      return;
+    }
     loadTasksForDate(searchDate);
+  };
+
+  // Manual refresh to check for new day
+  const handleRefresh = () => {
+    const today = getTodayDate();
+    console.log('Manual refresh - Current:', currentDate, 'Today:', today);
+    if (today !== currentDate) {
+      loadTasks();
+    } else {
+      alert('Already showing today\'s tasks!');
+    }
   };
 
   if (loading) {
@@ -379,23 +410,78 @@ export default function App() {
 
   return (
     <div className="h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 md:p-8 overflow-hidden">
-      <div className="max-w-2xl mx-auto h-full flex flex-col">
+      {/* Mobile Bottom Tab Navigation - Only on mobile */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
+        <div className="flex justify-around items-center py-2">
+          <button
+            onClick={() => setActiveTab('home')}
+            className={`flex flex-col items-center justify-center px-4 py-2 ${
+              activeTab === 'home' ? 'text-indigo-600' : 'text-gray-500'
+            }`}
+          >
+            <Calendar className="w-6 h-6" />
+            <span className="text-xs mt-1">Home</span>
+          </button>
+          
+          <button
+            onClick={() => setShowAddModal(true)}
+            className={`flex flex-col items-center justify-center px-4 py-2 ${
+              activeTab === 'add' ? 'text-indigo-600' : 'text-gray-500'
+            }`}
+          >
+            <Plus className="w-6 h-6" />
+            <span className="text-xs mt-1">Add Task</span>
+          </button>
+          
+          <button
+            onClick={() => {
+              setActiveTab('export');
+              setShowExportModal(true);
+            }}
+            className={`flex flex-col items-center justify-center px-4 py-2 ${
+              activeTab === 'export' ? 'text-indigo-600' : 'text-gray-500'
+            }`}
+          >
+            <Download className="w-6 h-6" />
+            <span className="text-xs mt-1">Export</span>
+          </button>
+          
+          <button
+            onClick={openHistory}
+            className={`flex flex-col items-center justify-center px-4 py-2 ${
+              activeTab === 'history' ? 'text-indigo-600' : 'text-gray-500'
+            }`}
+          >
+            <History className="w-6 h-6" />
+            <span className="text-xs mt-1">History</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="max-w-2xl mx-auto h-full flex flex-col pb-20 md:pb-0">
         <div className="bg-white rounded-lg shadow-xl p-6 md:p-8 flex flex-col h-full">
           {/* Header */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
-              <h1 className="text-xl md:text-3xl font-bold text-gray-800">Daily Tasks</h1>
+              <h1 className="text-3xl font-bold text-gray-800">Daily Tasks</h1>
               <div className="flex gap-2">
                 <button
+                  onClick={handleRefresh}
+                  className="flex items-center gap-2 px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                  title="Refresh to check new day"
+                >
+                  <RotateCw className="w-4 h-4" />
+                </button>
+                <button
                   onClick={openHistory}
-                  className="flex items-center gap-2 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-colors"
+                  className=" hidden md:flex items-center gap-2 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-colors"
                 >
                   <History className="w-5 h-5" />
                   History
                 </button>
               </div>
             </div>
-            <div className="flex items-center flex-col md:flex-row  md:justify-between">
+            <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center text-gray-600 text-sm">
                   <Calendar className="w-4 h-4 mr-2" />
@@ -407,10 +493,10 @@ export default function App() {
               </div>
               
               {/* Export/Import Buttons */}
-              <div className="flex gap-1 md:gap-2 mt-4 md:mt-0">
+              <div className="hidden md:flex gap-2">
                 <button
                   onClick={exportTodayTasks}
-                  className="flex items-center gap-2 px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors text-[10px] md:text-sm"
+                  className="flex items-center gap-2 px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors text-sm"
                   title="Export today's tasks"
                 >
                   <Download className="w-4 h-4" />
@@ -418,7 +504,7 @@ export default function App() {
                 </button>
                 <button
                   onClick={exportAllHistory}
-                  className="flex items-center gap-2 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-[10px] md:text-sm"
+                  className="flex items-center gap-2 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm"
                   title="Export all history"
                 >
                   <Download className="w-4 h-4" />
@@ -439,15 +525,15 @@ export default function App() {
             </div>
           </div>
 
-          {/* Add Task Input */}
-          <div className="hidden md:flex gap-2 mb-6 flex-col md:flex-row">
+          {/* Add Task Input - Desktop */}
+          <div className="hidden md:flex gap-2 mb-6">
             <input
               type="text"
               value={newTask}
               onChange={(e) => setNewTask(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Add a new task..."
-              className="flex-1  px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <button
               onClick={addTask}
@@ -457,16 +543,8 @@ export default function App() {
               Add
             </button>
           </div>
-           {/* Add Task Button - Mobile */}
-          <div className="md:hidden mb-2 ">
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
-            >
-              <Plus className="w-5 h-5" />
-              Add New Task
-            </button>
-          </div>
+
+         
 
           {/* Tasks List */}
           <div className="flex-1 overflow-y-auto space-y-2 pr-2"
@@ -542,6 +620,77 @@ export default function App() {
         </div>
       </div>
 
+      {/* Export/Import Modal - Mobile Only */}
+      {showExportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 md:hidden">
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-800">Export / Import</h3>
+              <button
+                onClick={() => {
+                  setShowExportModal(false);
+                  setActiveTab('home');
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="space-y-3">
+              <button
+                onClick={() => {
+                  exportTodayTasks();
+                  setShowExportModal(false);
+                  setActiveTab('home');
+                }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
+              >
+                <Download className="w-5 h-5" />
+                Export Today's Tasks
+              </button>
+              
+              <button
+                onClick={() => {
+                  exportAllHistory();
+                  setShowExportModal(false);
+                  setActiveTab('home');
+                }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+              >
+                <Download className="w-5 h-5" />
+                Export All History
+              </button>
+              
+              <label className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors cursor-pointer">
+                <Upload className="w-5 h-5" />
+                Import Tasks
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={(e) => {
+                    importTasks(e);
+                    setShowExportModal(false);
+                    setActiveTab('home');
+                  }}
+                  className="hidden"
+                />
+              </label>
+              
+              <button
+                onClick={() => {
+                  setShowExportModal(false);
+                  setActiveTab('home');
+                }}
+                className="w-full px-4 py-3 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add Task Modal - Mobile Only */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 md:hidden">
@@ -580,7 +729,7 @@ export default function App() {
       {/* History Modal */}
       {showHistory && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="bg-white rounded-lg shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             {/* History Header */}
             <div className="p-6 border-b flex items-center justify-between">
               <h2 className="text-2xl font-bold text-gray-800">Task History</h2>
@@ -592,27 +741,31 @@ export default function App() {
               </button>
             </div>
 
-            <div className="flex-1 overflow-hidden flex flex-col">
-              {/* Date Search */}
-              <div className="p-4 border-b">
-                <h3 className="text-sm font-semibold text-gray-600 mb-3">Search by Date</h3>
-                <div className="flex gap-2">
-                  <input
-                    type="date"
-                    value={searchDate}
-                    onChange={(e) => searchByDate(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                  <button
-                    onClick={searchByDate}
-                    className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-colors"
-                  >
-                    Search
-                  </button>
+            <div className="flex-1 overflow-hidden flex">
+              {/* Left Section: Date Search + Date List */}
+              <div className="w-1/3 border-r flex flex-col">
+                {/* Date Search */}
+                <div className="p-4 border-b bg-gray-50">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Search by Date</h3>
+                  <div className="flex flex-col gap-2">
+                    <input
+                      type="date"
+                      value={searchDate}
+                      onChange={(e) => setSearchDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                    />
+                    <button
+                      onClick={searchByDate}
+                      className="w-full px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-colors text-sm"
+                    >
+                      Search
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-             
+                {/* Dates List */}
+            
+              </div>
 
               {/* Tasks for Selected Date */}
               <div className="flex-1 overflow-y-auto p-6">
@@ -622,7 +775,7 @@ export default function App() {
                       {formatDate(selectedHistoryDate)}
                     </h3>
                     {historyTasks.length === 0 ? (
-                      <div className="text-gray-400">No tasks for this day</div>
+                      <div className="text-gray-400">No tasks recorded for this date</div>
                     ) : (
                       <>
                         <div className="mb-4 text-sm text-gray-600">
